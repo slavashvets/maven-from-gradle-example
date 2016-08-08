@@ -1,0 +1,65 @@
+plugins {
+  id "de.undercouch.download" version "3.1.1"
+}
+
+ext {
+  zeppelinProjectDir = "$buildDir/zeppelin"
+  zeppelinSourcesUrl = 'https://github.com/apache/zeppelin/archive/v0.6.0.zip'
+  mvnVersion = '3.3.9'
+  mvnHomeDir = "$buildDir/maven"
+}
+
+configurations {
+  maven
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  maven "org.apache.maven:apache-maven:${mvnVersion}:bin@zip"
+}
+
+task extractMavenPackage(type: Copy){
+  destinationDir file(mvnHomeDir)
+  from zipTree(configurations.maven.singleFile)
+  includeEmptyDirs = false
+  eachFile {  // workaround to skip first-level folder
+    List segments = it.relativePath.segments as List
+    it.path = segments.tail().join('/')
+  }
+}
+
+task downloadZeppelinSources(type: de.undercouch.gradle.tasks.download.Download) {
+  src zeppelinSourcesUrl
+  dest new File(buildDir, 'zeppelin.zip')
+  overwrite false
+}
+
+task extractZeppelinSources(type: Copy){
+  dependsOn downloadZeppelinSources
+  destinationDir file(zeppelinProjectDir)
+  from zipTree(downloadZeppelinSources.dest)
+  includeEmptyDirs = false
+  eachFile {  // workaround to skip first-level folder
+    List segments = it.relativePath.segments as List
+    it.path = segments.tail().join('/')
+  }
+}
+
+task mvnCleanPackage(type: Exec) {
+  dependsOn extractMavenPackage, extractZeppelinSources
+  commandLine "${mvnHomeDir}/bin/mvn.cmd"
+  workingDir zeppelinProjectDir
+  args "-T", "2"
+  args "-s", "$projectDir/settings.xml" // uncomment it if you want to provide custom settings.xml
+  args "clean", "package"
+  args "-DskipTests"
+  args "-P", "build-distr"
+  args "-Phadoop-2.6", "-Dhadoop.version=2.6.0", "-Dhbase.hbase.version=1.2.0", "-Dhbase.hadoop.version=2.6.0"
+
+  doFirst {
+    logger.lifecycle commandLine.join(' ')
+  }
+}
