@@ -53,7 +53,7 @@ task mvnCleanPackage(type: Exec) {
   commandLine "${mvnHomeDir}/bin/mvn.cmd"
   workingDir zeppelinProjectDir
   args "-T", "2"
-  args "-s", "$projectDir/settings.xml" // uncomment it if you want to provide custom settings.xml
+  // args "-s", "$projectDir/settings.xml" // uncomment it if you want to provide custom settings.xml
   args "clean", "package"
   args "-DskipTests"
   args "-P", "build-distr"
